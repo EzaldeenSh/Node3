@@ -1,7 +1,6 @@
 package communication;
 import data.Node;
 import data.NodesDaoUser;
-import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -22,11 +21,11 @@ public class NodesHandler implements Runnable{
         try {
 
             Message message = (Message) fromClient.readObject();
-            Node thisNode = nodesDaoUser.getNode("node3");
+            Node thisNode = Node.getInstance();
             thisNode.update(message);
             client.close();
 
-        } catch (IOException | ClassNotFoundException | ParseException e) {
+        } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 

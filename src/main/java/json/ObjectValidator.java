@@ -8,8 +8,6 @@ public class ObjectValidator {
     public boolean validateObject(JSONObject object, JSONObject schema){
         System.out.println(schema);
         System.out.println(schema.size());
-
-
         if(object.size() != schema.size())
             return false;
         else {
