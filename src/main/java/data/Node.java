@@ -1,5 +1,6 @@
 package data;
 import communication.*;
+import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -11,14 +12,20 @@ public class Node implements Observer, Subject {
     private final String nodeID;
     private int portNumber;
     private int numberOfConnectedUsers;
+    private final NodesDaoUser nodesDaoUser;
 
     private static Node instance;
 
     private Node() {
         nodeID = "node3";
-        this.portNumber = 8083;
+
         this.numberOfConnectedUsers = 0;
-        registerObservers();
+         nodesDaoUser =new NodesDaoUser();
+        try {
+            this.portNumber = nodesDaoUser.getOwnerPort(nodeID);
+        } catch (IOException | ParseException e) {
+            throw new RuntimeException(e);
+        }
     }
     public static Node getInstance(){
         if (instance == null){
@@ -27,11 +34,8 @@ public class Node implements Observer, Subject {
         return instance;
     }
     @Override
-    public void registerObservers() {
-        this.otherNodesPorts = new ArrayList<>();
-        otherNodesPorts.add(8081);
-        otherNodesPorts.add(8082);
-        otherNodesPorts.add(8084);
+    public void registerObservers() throws IOException, ParseException {
+        this.otherNodesPorts = nodesDaoUser.getAllOtherPorts();
     }
 
     public void setPortNumber(int portNumber) {
@@ -40,6 +44,9 @@ public class Node implements Observer, Subject {
 
     public void setNumberOfConnectedUsers(int numberOfConnectedClients) {
         this.numberOfConnectedUsers = numberOfConnectedClients;
+    }
+    public List<Integer> getOtherNodesPorts(){
+        return otherNodesPorts;
     }
     public String getNodeID() {
         return nodeID;
