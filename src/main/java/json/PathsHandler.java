@@ -1,11 +1,13 @@
 package json;
 
-public class PathsHandler {
+public class PathsHandler implements IPathsHandler{
     private final String basePath = "C:\\Users\\User\\Desktop\\Outputs3";
+    @Override
     public String getDatabasePath(String databaseName){
 
         return basePath +"\\"+ databaseName;
     }
+    @Override
     public String getCollectionPath(String databaseName, String collectionName){
         return getDatabasePath(databaseName + "\\"+ collectionName);
     }
@@ -23,6 +25,10 @@ public class PathsHandler {
     }
     public String getAffinityPath(String databaseName, String collectionName){
         return getCollectionPath(databaseName , collectionName) + "\\affinity.txt";
+    }
+    public String getSingleJSONPropertyPath(String databaseName, String collectionName, String property){
+        return getCollectionPath(databaseName , collectionName) + "\\"+ property+".json";
+
     }
 
     public String getBasePath() {

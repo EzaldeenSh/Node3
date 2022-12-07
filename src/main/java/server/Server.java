@@ -32,11 +32,9 @@ public class Server {
 
             while(true){
                 Socket client = serverSocket.accept();
-                System.out.println("Client Accepted");
                 ObjectOutputStream toClient = new ObjectOutputStream(client.getOutputStream());
                 ObjectInputStream fromClient = new ObjectInputStream(client.getInputStream());
                 String identity = (String)fromClient.readObject();
-                System.out.println(identity);
                 if(identity.equals("Node")){
                     NodesHandler nodesHandler = new NodesHandler(client , fromClient);
                     new Thread(nodesHandler).start();

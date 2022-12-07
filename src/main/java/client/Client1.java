@@ -1,53 +1,32 @@
 package client;
 
-import data.User;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Client1 {
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        Socket bootstrapClient = new Socket("localhost" , 8000);
-        ObjectOutputStream toBootstrap = new ObjectOutputStream(bootstrapClient.getOutputStream());
-        ObjectInputStream fromBootstrap = new ObjectInputStream(bootstrapClient.getInputStream());
+    public static void main(String[] args){
 
-        PortGetter portGetter = new PortGetter(toBootstrap, fromBootstrap);
-        UserGetter userGetter = new UserGetter(toBootstrap , fromBootstrap);
-        User myUser = userGetter.requestUser();
-        int portNumber = portGetter.requestPortNumber();
-        System.out.println("Port number is: "+portNumber);
-        bootstrapClient.close();
+        ClientDriver clientDriver = ClientDriver.getInstance();
+        clientDriver.createCredentials();
         System.out.println("bootstrapClient is closed");
-        ObjectInputStream fromServer;
-        ObjectOutputStream toServer;
+
 
         try {
             Thread.sleep(2000);
-        } catch (InterruptedException e){
-            e.printStackTrace();
+        } catch (InterruptedException ignored){
         }
-        try (Socket client = new Socket("localhost", portNumber)) {
-            System.out.println("connected to " + portNumber);
+        boolean validation = clientDriver.login();
+        if(!validation){
+            System.out.println("Client NOT Validated!");
+            return;
+        }
+        try  {
             Scanner sc = new Scanner(System.in);
-            toServer = new ObjectOutputStream(client.getOutputStream());
-            fromServer = new ObjectInputStream(client.getInputStream());
-            toServer.writeObject("Client");
-
-            toServer.writeObject(myUser.getUsername());
-            toServer.writeObject(myUser.getPassword());
-            boolean validation = (Boolean) fromServer.readObject();
-            if(validation)
-            {
-                System.out.println("Validated!");
-            }
             System.out.println("Please select an operation: \n" +
                     "1-Create Database.\n" +
                     "2-Create Collection.\n" +
@@ -57,21 +36,20 @@ public class Client1 {
                     "6-Update Object By Index. \n" +
                     "7-Delete Collection.\n" +
                     "8-Delete Database.\n" +
+                    "9-Create Index on a JSON Property\n"+
+                    "10-Get Single Property Indexing\n"+
                     "0-Exit.");
             int selection = sc.nextInt();
-            toServer.writeInt(selection);
-            toServer.flush();
 
-            while(selection!=0){
+            while(clientDriver.isConnected()){
                 switch (selection){
                       case 1:{
 
                         System.out.println("Please enter the name of your database: ");
 
                         String databaseName = sc.next();
-                        toServer.writeObject(databaseName);
+                        boolean result = clientDriver.createDatabase(databaseName);
 
-                        boolean result = (Boolean) fromServer.readObject();
                         if(result){
                             System.out.println("Database Created!");
                         } else
@@ -85,11 +63,11 @@ public class Client1 {
                                   "6-Update Object By Index. \n" +
                                   "7-Delete Collection.\n" +
                                   "8-Delete Database.\n" +
+                                  "9-Create Index on a JSON Property\n"+
+                                  "10-Get Single Property Indexing\n"+
                                   "0-Exit.");
 
                         selection = Integer.parseInt(sc.next());
-                        toServer.writeInt(selection);
-                            toServer.flush();
                          break;
                  }
                  case 2:{
@@ -100,13 +78,10 @@ public class Client1 {
                      System.out.println("Please enter your json schema: ");
                      String schema = sc.next();
                      JSONParser jsonParser = new JSONParser();
+
                      JSONObject jsonSchema = (JSONObject) jsonParser.parse(schema);
 
-                     toServer.writeObject(databaseName);
-                     toServer.writeObject(collectionName);
-                     toServer.writeObject(jsonSchema);
-
-                     boolean result = (Boolean)fromServer.readObject();
+                     boolean result = clientDriver.createCollection(databaseName , collectionName ,jsonSchema);
                      if(result)
                          System.out.println("Collection created!");
                      else
@@ -121,10 +96,11 @@ public class Client1 {
                              "6-Update Object By Index. \n" +
                              "7-Delete Collection.\n" +
                              "8-Delete Database.\n" +
+                             "9-Create Index on a JSON Property\n"+
+                             "10-Get Single Property Indexing\n"+
                              "0-Exit.");
                      selection = Integer.parseInt(sc.next());
-                     toServer.writeInt(selection);
-                     toServer.flush();
+
                      break;
                  }
                  case 3:{
@@ -136,11 +112,8 @@ public class Client1 {
                      System.out.println("Please enter the index of the wanted object");
                      int index = Integer.parseInt(sc.next());
 
-                     toServer.writeObject(databaseName);
-                     toServer.writeObject(collectionName);
-                     toServer.writeObject(index);
 
-                     JSONObject jsonObject = (JSONObject) fromServer.readObject();
+                     JSONObject jsonObject = clientDriver.readObjectByIndex(databaseName , collectionName , index);
                      System.out.println(jsonObject+"\n");
 
                      System.out.println("Please select an operation: \n" +
@@ -152,11 +125,11 @@ public class Client1 {
                              "6-Update Object By Index. \n" +
                              "7-Delete Collection.\n" +
                              "8-Delete Database.\n" +
+                             "9-Create Index on a JSON Property\n"+
+                             "10-Get Single Property Indexing\n"+
                              "0-Exit.");
 
                      selection = Integer.parseInt(sc.next());
-                     toServer.writeInt(selection);
-                     toServer.flush();
                      break;
                  }
                  case 4:{
@@ -166,10 +139,7 @@ public class Client1 {
                      System.out.println("Please enter the name of the collection: ");
                      String collectionName = sc.next();
 
-                     toServer.writeObject(databaseName);
-                     toServer.writeObject(collectionName);
-
-                     JSONArray jsonArray = (JSONArray) fromServer.readObject();
+                     JSONArray jsonArray = clientDriver.readCollection(databaseName , collectionName);
 
                      for(Object o : jsonArray){
                          System.out.println(o);
@@ -184,11 +154,11 @@ public class Client1 {
                              "6-Update Object By Index. \n" +
                              "7-Delete Collection.\n" +
                              "8-Delete Database.\n" +
+                             "9-Create Index on a JSON Property\n"+
+                             "10-Get Single Property Indexing\n"+
                              "0-Exit.");
 
                      selection = Integer.parseInt(sc.next());
-                     toServer.writeInt(selection);
-                     toServer.flush();
                      break;
                  }
                  case 5:{
@@ -197,14 +167,10 @@ public class Client1 {
                      System.out.println("Please enter the name of the collection: ");
                      String collectionName = sc.next();
                      JSONObject jsonObject = new JSONObject();
-                     jsonObject.put("nodeID" , "node4" );
-                     jsonObject.put("numberOfConnectedUsers" , 0);
-                     jsonObject.put("portNumber" , 8084);
-                     jsonObject.put("isActive" , true);
-                     toServer.writeObject(databaseName);
-                     toServer.writeObject(collectionName);
-                     toServer.writeObject(jsonObject);
-                     boolean result = (Boolean) fromServer.readObject();
+                     jsonObject.put("username","user2");
+                     jsonObject.put("password","p1");
+
+                     boolean result = clientDriver.writeObject(databaseName ,collectionName , jsonObject);
                      if(result)
                          System.out.println("Object Written");
                      else
@@ -218,12 +184,12 @@ public class Client1 {
                              "6-Update Object By Index. \n" +
                              "7-Delete Collection.\n" +
                              "8-Delete Database.\n" +
+                             "9-Create Index on a JSON Property\n"+
+                             "10-Get Single Property Indexing\n"+
                              "0-Exit.");
 
 
                      selection = Integer.parseInt(sc.next());
-                     toServer.writeInt(selection);
-                     toServer.flush();
                      break;
                  }
                  case 6:{
@@ -235,12 +201,10 @@ public class Client1 {
                      int index = sc.nextInt();
 
                      JSONObject jsonObject = new JSONObject();
-                     jsonObject.put("name" , "Ezz" );
-                     toServer.writeObject(databaseName);
-                     toServer.writeObject(collectionName);
-                     toServer.writeInt(index);
-                     toServer.writeObject(jsonObject);
-                     boolean result = (Boolean) fromServer.readObject();
+                     jsonObject.put("username" , "myUser" );
+                     jsonObject.put("password" , "myPassword");
+
+                     boolean result = clientDriver.updateObjectOnIndex(databaseName ,collectionName , index , jsonObject);
                      if(result)
                          System.out.println("Object Updated");
                      else
@@ -254,12 +218,12 @@ public class Client1 {
                              "6-Update Object By Index. \n" +
                              "7-Delete Collection.\n" +
                              "8-Delete Database.\n" +
+                             "9-Create Index on a JSON Property\n"+
+                             "10-Get Single Property Indexing\n"+
                              "0-Exit.");
 
 
                      selection = Integer.parseInt(sc.next());
-                     toServer.writeInt(selection);
-                     toServer.flush();
                      break;
                  }
                  case 7:{
@@ -267,10 +231,9 @@ public class Client1 {
                      String databaseName = sc.next();
                      System.out.println("Please enter the name of the collection: ");
                      String collectionName = sc.next();
-                     toServer.writeObject(databaseName);
-                     toServer.writeObject(collectionName);
 
-                     boolean result = (Boolean)fromServer.readObject();
+
+                     boolean result = clientDriver.deleteCollection(databaseName , collectionName);
                      if(result) System.out.println("Collection Deleted!");
                      else System.out.println("Collection not Deleted!");
 
@@ -284,21 +247,21 @@ public class Client1 {
                              "6-Update Object By Index. \n" +
                              "7-Delete Collection.\n" +
                              "8-Delete Database.\n" +
+                             "9-Create Index on a JSON Property\n"+
+                             "10-Get Single Property Indexing\n"+
                              "0-Exit.");
 
 
                      selection = Integer.parseInt(sc.next());
-                     toServer.writeInt(selection);
-                     toServer.flush();
                      break;
                  }
                  case 8:{
                      System.out.println("Please enter the name of your database: ");
 
                      String databaseName = sc.next();
-                     toServer.writeObject(databaseName);
 
-                     boolean result = (Boolean) fromServer.readObject();
+
+                     boolean result = clientDriver.deleteDatabase(databaseName);
                      if(result){
                          System.out.println("Database Deleted!");
                      } else
@@ -312,36 +275,88 @@ public class Client1 {
                              "6-Update Object By Index. \n" +
                              "7-Delete Collection.\n" +
                              "8-Delete Database.\n" +
+                             "9-Create Index on a JSON Property\n"+
+                             "10-Get Single Property Indexing\n"+
                              "0-Exit.");
 
                      selection = Integer.parseInt(sc.next());
-                     toServer.writeInt(selection);
-                     toServer.flush();
                      break;
                  }
+                    case 9:{
+                        System.out.println("Please enter the name of your Database: ");
+                        String databaseName = sc.next();
+                        System.out.println("Please enter the name of your Collection: ");
+                        String collectionName = sc.next();
+                        System.out.println("Please enter the name of your property: ");
+                        String propertyName = sc.next();
+
+                        boolean result = clientDriver.createIndexOnAJSONProperty(databaseName ,collectionName , propertyName);
+                        if(result){
+                            System.out.println("Indexing Done");
+                        } else
+                            System.out.println("Indexing not Done");
+
+                        System.out.println("Please select an operation: \n" +
+                                "1-Create Database.\n" +
+                                "2-Create Collection.\n" +
+                                "3-Read Object by Index.\n" +
+                                "4-Read Collection.\n" +
+                                "5-Write Collection.\n" +
+                                "6-Update Object By Index. \n" +
+                                "7-Delete Collection.\n" +
+                                "8-Delete Database.\n" +
+                                "9-Create Index on a JSON Property\n"+
+                                "10-Get Single Property Indexing\n"+
+                                "0-Exit.");
+                        selection = Integer.parseInt(sc.next());
+                        break;
+                    }
+                    case 10:{
+                        System.out.println("Please enter the name of your Database: ");
+                        String databaseName = sc.next();
+                        System.out.println("Please enter the name of your Collection: ");
+                        String collectionName = sc.next();
+                        System.out.println("Please enter the name of your property: ");
+                        String propertyName = sc.next();
+                        System.out.println("Please enter the name of your property value");
+                        String propertyValue = sc.next();
+
+
+                        ArrayList<Long> indexes = clientDriver.getJSONPropertyIndexes(databaseName ,collectionName , propertyName , propertyValue);
+                        for(Long l : indexes){
+                            System.out.println(l);
+                        }
+                        System.out.println("Please select an operation: \n" +
+                                "1-Create Database.\n" +
+                                "2-Create Collection.\n" +
+                                "3-Read Object by Index.\n" +
+                                "4-Read Collection.\n" +
+                                "5-Write Collection.\n" +
+                                "6-Update Object By Index. \n" +
+                                "7-Delete Collection.\n" +
+                                "8-Delete Database.\n" +
+                                "9-Create Index on a JSON Property\n"+
+                                "10-Get Single Property Indexing\n"+
+                                "0-Exit.");
+                        selection = Integer.parseInt(sc.next());
+
+                        break;
+                    }
+
                      default:{
-                         System.out.println("Invalid Selection");
+                         System.out.println("Logging out");
                          selection = 0;
+                         clientDriver.logout();
                          break;
                      }
 
                 }
             }
             Thread.sleep(100);
-            client.close();
             System.out.println("Client service is over");
 
 
-        } catch (UnknownHostException | InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            System.out.println("IOException");
-            throw new RuntimeException(e);
-        } catch (ClassNotFoundException e) {
-            System.out.println("ClassNotFoundException");
-            throw new RuntimeException(e);
-        } catch (ParseException e) {
-            System.out.println("ParseException");
+        } catch (InterruptedException | ParseException e) {
             throw new RuntimeException(e);
         }
 
